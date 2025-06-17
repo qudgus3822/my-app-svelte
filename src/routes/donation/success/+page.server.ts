@@ -6,7 +6,7 @@ import { kakaoPayService } from '$lib/services/kakaoPayService';
 
 export const load: PageServerLoad = async ({ url, cookies }) => {
 	const pgToken = url.searchParams.get('pg_token');
-	
+
 	if (!pgToken) {
 		throw redirect(303, '/donation?error=결제 정보가 없습니다.');
 	}
@@ -28,7 +28,7 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 		// 후원 데이터 업데이트
 		const donation = await Donation.findOneAndUpdate(
 			{ tid, orderId, status: 'pending' },
-			{ 
+			{
 				status: 'completed',
 				completedAt: new Date()
 			},
@@ -68,16 +68,12 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 				approvedAt: approveResponse.approved_at
 			}
 		};
-
 	} catch (error) {
 		console.error('결제 승인 오류:', error);
-		
+
 		// 실패한 후원 데이터 업데이트
 		try {
-			await Donation.findOneAndUpdate(
-				{ tid, orderId },
-				{ status: 'failed' }
-			);
+			await Donation.findOneAndUpdate({ tid, orderId }, { status: 'failed' });
 		} catch (updateError) {
 			console.error('후원 상태 업데이트 오류:', updateError);
 		}
@@ -89,4 +85,4 @@ export const load: PageServerLoad = async ({ url, cookies }) => {
 
 		throw redirect(303, '/donation/fail?error=결제 승인 중 오류가 발생했습니다.');
 	}
-}; 
+};

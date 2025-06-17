@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import type { ActionData } from './$types';
 
 	interface Props {
@@ -62,9 +63,26 @@
 				method="POST"
 				use:enhance={() => {
 					loading = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
 						await update();
 						loading = false;
+
+						// 서버 액션 결과 처리
+						if (result.type === 'success') {
+							// 성공 시 처리 (예: 결제 URL로 리다이렉트)
+							const data = result.data as { redirectUrl?: string; message?: string };
+							if (data?.redirectUrl) {
+								window.location.href = data.redirectUrl;
+							} else if (data?.message) {
+								alert(data.message);
+							}
+						} else if (result.type === 'failure') {
+							// 실패 시 처리는 이미 form prop으로 처리됨
+							console.error('후원 처리 실패:', result.data);
+						} else if (result.type === 'redirect') {
+							// 리다이렉트 처리
+							console.log('리다이렉트:', result.location);
+						}
 					};
 				}}
 			>
@@ -113,7 +131,8 @@
 							<button
 								type="button"
 								onclick={() => selectAmount(amount)}
-								class="rounded-lg border-2 py-3 text-center font-medium transition-all duration-200 {selectedAmount === amount
+								class="rounded-lg border-2 py-3 text-center font-medium transition-all duration-200 {selectedAmount ===
+								amount
 									? 'border-purple-500 bg-purple-50 text-purple-700'
 									: 'border-gray-200 text-gray-700 hover:border-purple-300'}"
 							>
@@ -181,7 +200,9 @@
 					disabled={loading || selectedAmount < 1000 || !userName || !userEmail}
 					class="w-full rounded-lg bg-gradient-to-r from-purple-500 to-pink-600 py-4 text-lg font-semibold text-white transition-all duration-200 hover:-translate-y-0.5 hover:transform hover:shadow-lg disabled:transform-none disabled:cursor-not-allowed disabled:opacity-50"
 				>
-					{loading ? '결제 준비 중...' : `카카오페이로 ${selectedAmount.toLocaleString()}원 후원하기`}
+					{loading
+						? '결제 준비 중...'
+						: `카카오페이로 ${selectedAmount.toLocaleString()}원 후원하기`}
 				</button>
 
 				<!-- 카카오페이 로고 -->
@@ -202,4 +223,4 @@
 			</ul>
 		</div>
 	</div>
-</div> 
+</div>

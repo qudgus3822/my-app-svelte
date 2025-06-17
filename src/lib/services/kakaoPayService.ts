@@ -57,6 +57,7 @@ export interface DonationRequest {
 	userEmail: string;
 	amount: number;
 	message?: string;
+	orderId: string;
 }
 
 class KakaoPayService {
@@ -66,58 +67,84 @@ class KakaoPayService {
 
 	private getHeaders() {
 		return {
-			'Authorization': `KakaoAK ${this.adminKey}`,
-			'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
+			Authorization: `SECRET_KEY ${this.adminKey}`,
+			'Content-Type': 'application/json'
 		};
 	}
 
 	// 결제 준비 (Ready)
 	async ready(donationData: DonationRequest): Promise<KakaoPayReadyResponse> {
-		const orderId = `donation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-		
-		const params = new URLSearchParams({
+		console.log('KAKAO_PAY_BASE_URL', KAKAO_PAY_BASE_URL);
+		console.log('KAKAO_PAY_ADMIN_KEY', KAKAO_PAY_ADMIN_KEY);
+		console.log('KAKAO_PAY_CID', KAKAO_PAY_CID);
+
+		// JSON 형태로 요청 데이터 준비 (공식 문서 기준)
+		const requestData = {
 			cid: this.cid,
-			partner_order_id: orderId,
+			partner_order_id: donationData.orderId,
 			partner_user_id: donationData.userEmail,
 			item_name: '후원금',
-			quantity: '1',
-			total_amount: donationData.amount.toString(),
-			tax_free_amount: '0',
+			quantity: 1,
+			total_amount: donationData.amount,
+			tax_free_amount: 0,
 			approval_url: `${PUBLIC_BASE_URL}/donation/success`,
 			cancel_url: `${PUBLIC_BASE_URL}/donation/cancel`,
 			fail_url: `${PUBLIC_BASE_URL}/donation/fail`
-		});
+		};
 
 		try {
-			const response = await axios.post(
-				`${this.baseURL}/v1/payment/ready`,
-				params,
-				{ headers: this.getHeaders() }
-			);
+			const response = await axios.post(`${this.baseURL}/online/v1/payment/ready`, requestData, {
+				headers: this.getHeaders()
+			});
 
+			console.log('카카오페이 결제 준비 성공:', response.data);
 			return response.data;
 		} catch (error) {
 			console.error('카카오페이 결제 준비 오류:', error);
+			
+			// axios 에러인 경우 더 자세한 정보 출력
+			if (axios.isAxiosError(error)) {
+				console.error('HTTP 상태 코드:', error.response?.status);
+				console.error('응답 데이터:', error.response?.data);
+				console.error('요청 URL:', error.config?.url);
+				console.error('요청 헤더:', error.config?.headers);
+				console.error('요청 데이터:', error.config?.data);
+				
+				// 카카오페이 API 에러 응답 확인
+				if (error.response?.data) {
+					const kakaoError = error.response.data;
+					console.error('카카오페이 에러 코드:', kakaoError.error_code);
+					console.error('카카오페이 에러 메시지:', kakaoError.error_message);
+					throw new Error(
+						`카카오페이 API 오류: [${kakaoError.error_code}] ${kakaoError.error_message}`
+					);
+				}
+			}
+			
 			throw new Error('결제 준비 중 오류가 발생했습니다.');
 		}
 	}
 
 	// 결제 승인 (Approve)
-	async approve(tid: string, pgToken: string, partnerOrderId: string, partnerUserId: string): Promise<KakaoPayApproveResponse> {
-		const params = new URLSearchParams({
+	async approve(
+		tid: string,
+		pgToken: string,
+		partnerOrderId: string,
+		partnerUserId: string
+	): Promise<KakaoPayApproveResponse> {
+		const requestData = {
 			cid: this.cid,
 			tid: tid,
 			partner_order_id: partnerOrderId,
 			partner_user_id: partnerUserId,
 			pg_token: pgToken
-		});
+		};
 
 		try {
-			const response = await axios.post(
-				`${this.baseURL}/v1/payment/approve`,
-				params,
-				{ headers: this.getHeaders() }
-			);
+			console.log('requestData', requestData);
+			const response = await axios.post(`${this.baseURL}/online/v1/payment/approve`, requestData, {
+				headers: this.getHeaders()
+			});
 
 			return response.data;
 		} catch (error) {
@@ -128,19 +155,17 @@ class KakaoPayService {
 
 	// 결제 취소 (Cancel)
 	async cancel(tid: string, cancelAmount: number, cancelTaxFreeAmount = 0) {
-		const params = new URLSearchParams({
+		const requestData = {
 			cid: this.cid,
 			tid: tid,
-			cancel_amount: cancelAmount.toString(),
-			cancel_tax_free_amount: cancelTaxFreeAmount.toString()
-		});
+			cancel_amount: cancelAmount,
+			cancel_tax_free_amount: cancelTaxFreeAmount
+		};
 
 		try {
-			const response = await axios.post(
-				`${this.baseURL}/v1/payment/cancel`,
-				params,
-				{ headers: this.getHeaders() }
-			);
+			const response = await axios.post(`${this.baseURL}/online/v1/payment/cancel`, requestData, {
+				headers: this.getHeaders()
+			});
 
 			return response.data;
 		} catch (error) {
@@ -150,4 +175,4 @@ class KakaoPayService {
 	}
 }
 
-export const kakaoPayService = new KakaoPayService(); 
+export const kakaoPayService = new KakaoPayService();
