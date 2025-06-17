@@ -8,8 +8,6 @@ export const actions: Actions = {
 	default: async ({ request }) => {
 		const data = await request.formData();
 		
-		// FormData 전체 내용 로깅
-		console.log('FormData entries:');
 		for (const [key, value] of data.entries()) {
 			console.log(`${key}: ${value}`);
 		}

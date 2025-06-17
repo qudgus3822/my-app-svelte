@@ -74,10 +74,6 @@ class KakaoPayService {
 
 	// 결제 준비 (Ready)
 	async ready(donationData: DonationRequest): Promise<KakaoPayReadyResponse> {
-		console.log('KAKAO_PAY_BASE_URL', KAKAO_PAY_BASE_URL);
-		console.log('KAKAO_PAY_ADMIN_KEY', KAKAO_PAY_ADMIN_KEY);
-		console.log('KAKAO_PAY_CID', KAKAO_PAY_CID);
-
 		// JSON 형태로 요청 데이터 준비 (공식 문서 기준)
 		const requestData = {
 			cid: this.cid,
@@ -97,7 +93,6 @@ class KakaoPayService {
 				headers: this.getHeaders()
 			});
 
-			console.log('카카오페이 결제 준비 성공:', response.data);
 			return response.data;
 		} catch (error) {
 			console.error('카카오페이 결제 준비 오류:', error);
@@ -141,7 +136,6 @@ class KakaoPayService {
 		};
 
 		try {
-			console.log('requestData', requestData);
 			const response = await axios.post(`${this.baseURL}/online/v1/payment/approve`, requestData, {
 				headers: this.getHeaders()
 			});
